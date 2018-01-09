@@ -82,7 +82,7 @@ for TYPE in ${TYPES[@]}; do
     # look for files already having a complete closing marker
     #   because the EBI sends pretty-printed (indented) XML, 
     #   closing marker at start-of-line means that the file is complete
-    grep -El "^</.+>$" * > $HAVE
+    grep -El "^</.+>$" EGA* > $HAVE
 
     # remove all file-names in already-have from todo
     grep -vFf $HAVE $TODO > "$OUTPUT_DIR/tmp-$TYPE.txt"
