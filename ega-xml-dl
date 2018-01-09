@@ -67,6 +67,8 @@ for TYPE in ${TYPES[@]}; do
     TYPE_DIR="$OUTPUT_DIR/$TYPE"
     TODO="$( todo_for $TYPE )"
 
+    # store all XML files per analysis type
+    if [ ! -d $TYPE_DIR ]; then mkdir $TYPE_DIR; fi;
     cd $TYPE_DIR
 
     ###################################
@@ -91,10 +93,6 @@ for TYPE in ${TYPES[@]}; do
     ###################################
     # STEP 2B: actually get stuff
     echo "processing $TODO ($( linecount $TODO ) items)"
-
-    # store all XML files per analysis type
-    if [ ! -d $TYPE_DIR ]; then mkdir $TYPE_DIR; fi;
-    cd $TYPE_DIR # might be redundant if we already did it, during checking
 
     # get batch of XML files for this data-type
     wget \
