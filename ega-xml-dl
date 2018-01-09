@@ -1,0 +1,111 @@
+#!/bin/bash
+
+# count lines in a file, returning ONLY the numeric count 
+linecount() {
+  wc -l $1 | cut -d' ' -f1
+}
+
+todo_for() {
+    echo "$OUTPUT_DIR/todo-$1.txt"
+}
+
+
+
+# Login Information for EGA
+# TODO: make sure cmd input is KeePass compatible (tab separated)
+read -p "From which box do you wish to download? ega-box-" BOX_NR
+BOX="ega-box-$BOX_NR"
+read -p "password for $BOX? (ctrl+shift+v to paste) " -s PASSWORD
+echo 
+
+
+# timestamp so we can 'version' our data
+DATE=$(date '+%Y-%m-%d')
+
+# where to put our batch downloads
+OUTPUT_DIR="$HOME/ega-xml/$BOX/$DATE";
+echo "Outputting downloads to $OUTPUT_DIR"
+
+if [ ! -d $OUTPUT_DIR ]; then mkdir -p $OUTPUT_DIR; fi;
+
+
+###################################
+# STEP 1: grab list of todo's
+
+# the files list individual entries using this format
+ITEM_PATTERN="https://www.ebi.ac.uk/ena/submit/drop-box/[^/]+/(EGA[ZXRNSCD]?\d+)\?format=html"
+
+# for each of the raw data-types of EGA
+#   skip 'policys' 'projects'
+TYPES=('analyses' 'experiments' 'runs' 'samples' 'studies' 'submissions' 'dacs' 'datasets')
+for TYPE in ${TYPES[@]}; do
+    echo "preparing todo-list for $TYPE"
+    # construct the overview URL
+    URL="https://www.ebi.ac.uk/ena/submit/drop-box/$TYPE"
+
+    # unfortunately, there is no way to use recursive wget, because the EBI does not offer
+    # any listing of all the XML files (even requesting the overview with "format=xml" does nothing
+    #
+    # WORKAROUND:
+    #   1) wget: get the overview list
+    #   2) grep: extract only the links to listed files
+    #   3) sed:  convert the links to point at the XML result, instead of HTML
+    #   4) store as a batch file of URLs, for a second wget invocation
+    wget \
+         --no-verbose \
+         --user-agent="DKFZ ega crawler" \
+         --user="$BOX" --password="$PASSWORD" \
+         --output-document='-' $URL \
+         | grep --perl-regexp --only-matching "$ITEM_PATTERN" \
+         | sed 's/format=html/format=xml/' \
+         > todo_for $TYPE
+
+done
+
+
+for TYPE in ${TYPES[@]}; do
+    TYPE_DIR="$OUTPUT_DIR/$TYPE"
+    TODO="$( todo_for $TYPE )"
+
+    cd $TYPE_DIR
+
+    ###################################
+	# STEP 2A: filter what we already have, if any
+
+    echo "checking $TYPE for pre-existing downloads"
+    echo "   unfiltered ToDo-list has $( linecount $TODO ) items"
+
+    HAVE="$OUTPUT_DIR/already-have-$TYPE.txt"
+
+    # look for files already having a complete closing marker
+    #   because the EBI sends pretty-printed (indented) XML, 
+    #   closing marker at start-of-line means that the file is complete
+    grep -El "^</.+>$" * > $HAVE
+
+    # remove all file-names in already-have from todo
+    grep -vFf $HAVE $TODO > "$OUTPUT_DIR/tmp-$TYPE.txt"
+    mv "$OUTPUT_DIR/tmp-$TYPE.txt" $TODO
+    echo "   removed $( linecount $HAVE ) previously downloaded items, $( linecount $TODO ) remaining"
+    rm $HAVE
+
+    ###################################
+    # STEP 2B: actually get stuff
+    echo "processing $TODO ($( linecount $TODO ) items)"
+
+    # store all XML files per analysis type
+    if [ ! -d $TYPE_DIR ]; then mkdir $TYPE_DIR; fi;
+    cd $TYPE_DIR # might be redundant if we already did it, during checking
+
+    # get batch of XML files for this data-type
+    wget \
+         --no-verbose \
+         --limit-rate=2M \
+         --continue \
+         --user-agent="DKFZ ega crawler" \
+         --user="$BOX" --password="$PASSWORD" \
+         --input-file $TODO
+
+    rm $TODO
+done
+
+echo "DONE: got data for all types!"
