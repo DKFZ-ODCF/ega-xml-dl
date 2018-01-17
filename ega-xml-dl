@@ -58,10 +58,11 @@ for TYPE in ${TYPES[@]}; do
          --output-document='-' $URL \
          | grep --perl-regexp --only-matching "$ITEM_PATTERN" \
          | sed 's/format=html/format=xml/' \
-         > todo_for $TYPE
+         > $( todo_for $TYPE )
 
 done
 
+echo "done preparing ToDo lists, now getting files"
 
 for TYPE in ${TYPES[@]}; do
     TYPE_DIR="$OUTPUT_DIR/$TYPE"
