@@ -2,7 +2,7 @@
 
 # count lines in a file, returning ONLY the numeric count 
 linecount() {
-  wc -l $1 | cut -d' ' -f1
+  wc -l "$1" | cut -d' ' -f1
 }
 
 todo_for() {
@@ -26,7 +26,7 @@ DATE=$(date '+%Y-%m-%d')
 OUTPUT_DIR="$HOME/ega-xml/$BOX/$DATE";
 echo "Outputting downloads to $OUTPUT_DIR"
 
-if [ ! -d $OUTPUT_DIR ]; then mkdir -p $OUTPUT_DIR; fi;
+if [ ! -d "$OUTPUT_DIR" ]; then mkdir -p "$OUTPUT_DIR"; fi;
 
 
 ###################################
@@ -38,7 +38,7 @@ ITEM_PATTERN="https://www.ebi.ac.uk/ena/submit/drop-box/[^/]+/(EGA[ZXRNSCD]?\d+)
 # for each of the raw data-types of EGA
 #   skip 'policys' 'projects'
 TYPES=('analyses' 'experiments' 'runs' 'samples' 'studies' 'submissions' 'dacs' 'datasets')
-for TYPE in ${TYPES[@]}; do
+for TYPE in "${TYPES[@]}"; do
     echo "preparing todo-list for $TYPE"
     # construct the overview URL
     URL="https://www.ebi.ac.uk/ena/submit/drop-box/$TYPE"
@@ -53,47 +53,47 @@ for TYPE in ${TYPES[@]}; do
     #   4) store as a batch file of URLs, for a second wget invocation
     wget \
          --no-verbose \
-         --user-agent="DKFZ ega crawler" \
+         --user-agent="DKFZ ega crawler - dmg-service@dkfz-heidelberg.de" \
          --user="$BOX" --password="$PASSWORD" \
          --output-document='-' $URL \
          | grep --perl-regexp --only-matching "$ITEM_PATTERN" \
          | sed 's/format=html/format=xml/' \
-         > $( todo_for $TYPE )
+         > "$( todo_for $TYPE )"
 
 done
 
 echo "done preparing ToDo lists, now getting files"
 
-for TYPE in ${TYPES[@]}; do
+for TYPE in "${TYPES[@]}"; do
     TYPE_DIR="$OUTPUT_DIR/$TYPE"
     TODO="$( todo_for $TYPE )"
 
     # store all XML files per analysis type
-    if [ ! -d $TYPE_DIR ]; then mkdir $TYPE_DIR; fi;
-    cd $TYPE_DIR
+    if [ ! -d "$TYPE_DIR" ]; then mkdir "$TYPE_DIR"; fi;
+    cd "$TYPE_DIR"
 
     ###################################
 	# STEP 2A: filter what we already have, if any
 
     echo "checking $TYPE for pre-existing downloads"
-    echo "   unfiltered ToDo-list has $( linecount $TODO ) items"
+    echo "   unfiltered ToDo-list has $( linecount "$TODO" ) items"
 
     HAVE="$OUTPUT_DIR/already-have-$TYPE.txt"
 
     # look for files already having a complete closing marker
     #   because the EBI sends pretty-printed (indented) XML, 
     #   closing marker at start-of-line means that the file is complete
-    grep -El "^</.+>$" EGA* > $HAVE
+    grep -El "^</.+>$" EGA* > "$HAVE"
 
     # remove all file-names in already-have from todo
-    grep -vFf $HAVE $TODO > "$OUTPUT_DIR/tmp-$TYPE.txt"
-    mv "$OUTPUT_DIR/tmp-$TYPE.txt" $TODO
-    echo "   removed $( linecount $HAVE ) previously downloaded items, $( linecount $TODO ) remaining"
-    rm $HAVE
+    grep -vFf "$HAVE" "$TODO" > "$OUTPUT_DIR/tmp-$TYPE.txt"
+    mv "$OUTPUT_DIR/tmp-$TYPE.txt" "$TODO"
+    echo "   removed $( linecount "$HAVE" ) previously downloaded items, $( linecount "$TODO" ) remaining"
+    rm "$HAVE"
 
     ###################################
     # STEP 2B: actually get stuff
-    echo "processing $TODO ($( linecount $TODO ) items)"
+    echo "processing $TODO ($( linecount "$TODO" ) items)"
 
     # get batch of XML files for this data-type
     wget \
@@ -102,9 +102,9 @@ for TYPE in ${TYPES[@]}; do
          --continue \
          --user-agent="DKFZ ega crawler" \
          --user="$BOX" --password="$PASSWORD" \
-         --input-file $TODO
+         --input-file "$TODO"
 
-    rm $TODO
+    rm "$TODO"
 done
 
 echo "DONE: got data for all types!"
