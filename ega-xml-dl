@@ -53,7 +53,7 @@ for TYPE in "${TYPES[@]}"; do
     #   4) store as a batch file of URLs, for a second wget invocation
     wget \
          --no-verbose \
-         --user-agent="DKFZ ega crawler - dmg-service@dkfz-heidelberg.de" \
+         --user-agent="DKFZ ega crawler - odcf-service@dkfz-heidelberg.de" \
          --user="$BOX" --password="$PASSWORD" \
          --output-document='-' $URL \
          | grep --perl-regexp --only-matching "$ITEM_PATTERN" \
