@@ -23,7 +23,7 @@ echo
 DATE=$(date '+%Y-%m-%d')
 
 # where to put our batch downloads
-OUTPUT_DIR="$HOME/ega-xml/$BOX/$DATE";
+OUTPUT_DIR="$HOME/ega-xml/$BOX";
 echo "Outputting downloads to $OUTPUT_DIR"
 
 if [ ! -d "$OUTPUT_DIR" ]; then mkdir -p "$OUTPUT_DIR"; fi;
