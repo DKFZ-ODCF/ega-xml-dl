@@ -38,8 +38,12 @@ if [ ! -d "$OUTPUT_DIR" ]; then mkdir -p "$OUTPUT_DIR"; fi;
 ###################################
 # STEP 1: grab list of todo's
 
-# the files list individual entries using this format
-ITEM_PATTERN="https://www.ebi.ac.uk/ena/submit/drop-box/[^/]+/(EGA[ZXRNSCD]?\d+)\?format=html"
+# Regex to extract individual items from HTML overview pages
+# matches both EGA ("EGA") and ENA ("ER") ID's
+# following the arachive identifier, a letter identifies the type of data, then a number the item
+# EGA: Z=analysis, X=eXperiment, R=Run, N=sample, S=Study, D=Dataset, '<blank>'=Submission, C=daCs
+# ENA:             X=eXperiment, R=Run, S=Sample, P=study/Project, A=Submission
+ITEM_PATTERN="https://www.ebi.ac.uk/ena/submit/drop-box/[^/]+/((EGA|ER)[ZXRNSCPDA]?\d+)\?format=html"
 
 # for each of the raw data-types of EGA
 #   skip 'policys' 'projects'
