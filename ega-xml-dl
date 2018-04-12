@@ -13,8 +13,14 @@ todo_for() {
 
 # Login Information for EGA
 # TODO: make sure cmd input is KeePass compatible (tab separated)
-read -p "From which box do you wish to download? ega-box-" BOX_NR
-BOX="ega-box-$BOX_NR"
+
+if [ -z $1 ]; then # see if box was specified on command line
+  read -p "From which box do you wish to download? ega-box-" BOX_NR
+  BOX="ega-box-$BOX_NR"
+else
+  BOX="$1"
+fi
+# get password
 read -p "password for $BOX? (ctrl+shift+v to paste) " -s PASSWORD
 echo 
 
