@@ -46,7 +46,8 @@ if [ ! -d "$OUTPUT_DIR" ]; then mkdir -p "$OUTPUT_DIR"; fi;
 ITEM_PATTERN="https://www.ebi.ac.uk/ena/submit/drop-box/[^/]+/((EGA|ER)[ZXRNSCPDA]?\d+)\?format=html"
 
 # for each of the raw data-types of EGA
-#   skip 'policys' 'projects'
+# note, TYPE-strings match EGA-API as-is (including spelling errors), do not "fix", or you'll get errors
+# skip 'project' and 'policys', as there is no content there via this format.
 TYPES=('analyses' 'experiments' 'runs' 'samples' 'studies' 'submissions' 'dacs' 'datasets')
 for TYPE in "${TYPES[@]}"; do
     echo "preparing todo-list for $TYPE"
