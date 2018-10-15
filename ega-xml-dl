@@ -94,10 +94,10 @@ for TYPE in "${TYPES[@]}"; do
     # look for files already having a complete closing marker
     #   because the EBI sends pretty-printed (indented) XML, 
     #   closing marker at start-of-line means that the file is complete
-    grep -El "^</.+>$" EGA*?format=xml ER*?format=xml > "$HAVE"
+    grep --files-with-matches --extended-regexp "^</.+>$" EGA* ER* | grep --only-matching --extended-regexp "(EGA|ER).[0-9]+" > "$HAVE"
 
     # remove all file-names in already-have from todo
-    grep -vFf "$HAVE" "$TODO" > "$OUTPUT_DIR/tmp-$TYPE.txt"
+    grep --invert-match --fixed-strings --file="$HAVE" "$TODO" > "$OUTPUT_DIR/tmp-$TYPE.txt"
     mv "$OUTPUT_DIR/tmp-$TYPE.txt" "$TODO"
     echo "   removed $( linecount "$HAVE" ) previously downloaded items, $( linecount "$TODO" ) remaining"
     rm "$HAVE"
