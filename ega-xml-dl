@@ -111,7 +111,7 @@ for TYPE in "${TYPES[@]}"; do
          --no-verbose \
          --limit-rate=2M \
          --continue \
-         --user-agent="DKFZ ega crawler" \
+         --user-agent="DKFZ ega crawler - odcf-service@dkfz-heidelberg.de" \
          --user="$BOX" --password="$PASSWORD" \
          --input-file "$TODO"
 
