@@ -1,5 +1,11 @@
 #!/bin/bash
 
+#set -eu
+
+# user agent to report as; let the archive know who is hammering their servers
+I_AM_THE_ONE_WHO_KNOCKS="DKFZ ega crawler - odcf-service@dkfz-heidelberg.de"
+
+
 # count lines in a file, returning ONLY the numeric count 
 linecount() {
   wc -l "$1" | cut -d' ' -f1
@@ -38,13 +44,6 @@ if [ ! -d "$OUTPUT_DIR" ]; then mkdir -p "$OUTPUT_DIR"; fi;
 ###################################
 # STEP 1: grab list of todo's
 
-# Regex to extract individual items from HTML overview pages
-# matches both EGA ("EGA") and ENA ("ER") ID's
-# following the arachive identifier, a letter identifies the type of data, then a number the item
-# EGA: Z=analysis, X=eXperiment, R=Run, N=sample, S=Study, D=Dataset, '<blank>'=Submission, C=daCs
-# ENA:             X=eXperiment, R=Run, S=Sample, P=study/Project, A=Submission
-ITEM_PATTERN="https://www.ebi.ac.uk/ena/submit/drop-box/[^/]+/((EGA|ER)[ZXRNSCPDA]?\d+)\?format=html"
-
 # for each of the raw data-types of EGA
 # note, TYPE-strings match EGA-API as-is (including spelling errors), do not "fix", or you'll get errors
 # skip 'project' and 'policys', as there is no content there via this format.
@@ -52,25 +51,26 @@ TYPES=('analyses' 'experiments' 'runs' 'samples' 'studies' 'submissions' 'dacs' 
 for TYPE in "${TYPES[@]}"; do
     echo "preparing todo-list for $TYPE"
     # construct the overview URL
-    URL="https://www.ebi.ac.uk/ena/submit/drop-box/$TYPE"
+    URL="https://www.ebi.ac.uk/ena/submit/report/$TYPE/?format=csv&max-results=99999"
 
     # unfortunately, there is no way to use recursive wget, because the EBI does not offer
     # any listing of all the XML files (even requesting the overview with "format=xml" does nothing
     #
-    # WORKAROUND:
-    #   1) wget: get the overview list
-    #   2) grep: extract only the links to listed files
-    #   3) sed:  convert the links to point at the XML result, instead of HTML
-    #   4) store as a batch file of URLs, for a second wget invocation
-    wget \
-         --no-verbose \
-         --user-agent="DKFZ ega crawler - odcf-service@dkfz-heidelberg.de" \
-         --user="$BOX" --password="$PASSWORD" \
-         --output-document='-' $URL \
-         | grep --perl-regexp --only-matching "$ITEM_PATTERN" \
-         | sed 's/format=html/format=xml/' \
-         > "$( todo_for $TYPE )"
-
+    # curl: fetches the table of all available data
+    # tail: skip the header line
+    # cut: extract the column holding EGA-IDs
+    # sed: convert EGA-ID into a fetchable XML URL
+    curl \
+        -u "$BOX:$PASSWORD" \
+        --user-agent "$I_AM_THE_ONE_WHO_KNOCKS" \
+        --compressed \
+        --limit-rate 1M \
+        --silent \
+        --ssl-reqd \
+        "$URL" \
+      | tail -n+2 \
+      | cut -d, -f2 \
+      > "$( todo_for $TYPE )"
 done
 
 echo "done preparing ToDo lists, now getting files"
@@ -107,14 +107,18 @@ for TYPE in "${TYPES[@]}"; do
     echo "processing $TODO ($( linecount "$TODO" ) items)"
 
     # get batch of XML files for this data-type
-    wget \
-         --no-verbose \
-         --limit-rate=2M \
-         --continue \
-         --user-agent="DKFZ ega crawler - odcf-service@dkfz-heidelberg.de" \
-         --user="$BOX" --password="$PASSWORD" \
-         --input-file "$TODO"
-
+    while read ID; do
+        URL="https://wwwdev.ebi.ac.uk/ena/submit/drop-box/$TYPE/$ID?format=xml%"
+        curl \
+            -u "$BOX:$PASSWORD" \
+            --user-agent "$I_AM_THE_ONE_WHO_KNOCKS" \
+            --compressed \
+            --limit-rate 1M \
+            --silent \
+            --ssl-reqd \
+            --output "$ID" \
+            "$URL"
+    done < "$TODO"
     rm "$TODO"
 done
 
