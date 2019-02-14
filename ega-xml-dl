@@ -94,7 +94,8 @@ for TYPE in "${TYPES[@]}"; do
     # look for files already having a complete closing marker
     #   because the EBI sends pretty-printed (indented) XML, 
     #   closing marker at start-of-line means that the file is complete
-    grep --files-with-matches --extended-regexp "^</.+>$" EGA* ER* | grep --only-matching --extended-regexp "(EGA|ER).[0-9]+" > "$HAVE"
+    grep --files-with-matches --recursive --include=EGA* --include=ER* --extended-regexp "^</.+>$" \
+        | grep --only-matching --extended-regexp "(EGA|ER).[0-9]+" > "$HAVE"
 
     # remove all file-names in already-have from todo
     grep --invert-match --fixed-strings --file="$HAVE" "$TODO" > "$OUTPUT_DIR/tmp-$TYPE.txt"
