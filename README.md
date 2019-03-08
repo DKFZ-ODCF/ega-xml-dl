@@ -22,7 +22,7 @@ From which box do you wish to download? ega-box-_
 > 81
 ```
 
-The box password
+The box password is asked per normal `read -p` on stdin, to avoid passwords ending up in shell history or (externally visible) shell environment.
 
 ## Caching strategy
 
