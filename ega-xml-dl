@@ -30,10 +30,6 @@ fi
 read -p "password for $BOX? (ctrl+shift+v to paste) " -s PASSWORD
 echo 
 
-
-# timestamp so we can 'version' our data
-DATE=$(date '+%Y-%m-%d')
-
 # where to put our batch downloads
 OUTPUT_DIR="$HOME/ega-xml/$BOX";
 echo "Outputting downloads to $OUTPUT_DIR"
