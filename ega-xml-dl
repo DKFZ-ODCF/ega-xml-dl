@@ -3,7 +3,7 @@
 #set -eu
 
 # user agent to report as; let the archive know who is hammering their servers
-I_AM_THE_ONE_WHO_KNOCKS="DKFZ ega crawler - odcf-service@dkfz-heidelberg.de"
+I_AM_THE_ONE_WHO_KNOCKS="DKFZ ega crawler - ${USER}@${HOSTNAME}"
 
 
 # count lines in a file, returning ONLY the numeric count 
