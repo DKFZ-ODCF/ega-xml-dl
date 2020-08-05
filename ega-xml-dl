@@ -33,9 +33,11 @@ echo
 
 # where to put our batch downloads
 OUTPUT_DIR="$HOME/ega-xml/$BOX";
-echo "Outputting downloads to $OUTPUT_DIR"
 
 if [ ! -d "$OUTPUT_DIR" ]; then mkdir -p "$OUTPUT_DIR"; fi;
+
+echo "Outputting downloads to $OUTPUT_DIR"
+echo "Identifying to EGA as user-agent \"${I_AM_THE_ONE_WHO_KNOCKS}\""
 
 
 ###################################
