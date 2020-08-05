@@ -5,6 +5,7 @@
 # user agent to report as; let the archive know who is hammering their servers
 I_AM_THE_ONE_WHO_KNOCKS="DKFZ ega crawler - ${USER}@${HOSTNAME}"
 
+EBI_BASE_URL="https://www.ebi.ac.uk/ena/submit"
 
 # count lines in a file, returning ONLY the numeric count 
 linecount() {
@@ -47,7 +48,7 @@ TYPES=('analyses' 'experiments' 'runs' 'samples' 'studies' 'submissions' 'dacs' 
 for TYPE in "${TYPES[@]}"; do
     echo "preparing todo-list for $TYPE"
     # construct the overview URL
-    URL="https://www.ebi.ac.uk/ena/submit/report/$TYPE/?format=csv&max-results=99999"
+    URL="${EBI_BASE_URL}/report/$TYPE/?format=csv&max-results=99999"
 
     # unfortunately, there is no way to use recursive wget, because the EBI does not offer
     # any listing of all the XML files (even requesting the overview with "format=xml" does nothing
@@ -105,7 +106,7 @@ for TYPE in "${TYPES[@]}"; do
 
     # get batch of XML files for this data-type
     while read ID; do
-        URL="https://wwwdev.ebi.ac.uk/ena/submit/drop-box/$TYPE/$ID?format=xml%"
+        URL="${EBI_BASE_URL}/drop-box/$TYPE/$ID?format=xml%"
         curl \
             -u "$BOX:$PASSWORD" \
             --user-agent "$I_AM_THE_ONE_WHO_KNOCKS" \
