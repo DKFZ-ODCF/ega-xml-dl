@@ -38,4 +38,4 @@ a publicly funded body. It is made openly available under the MIT license under 
 
 If you use it, and have any ideas, suggestions or wish to contribute improvements, feel free to contribute or open issues at upstream:
 
-https://odcf-gitlab.dkfz.de/DMG/ega-xml-dl/
+https://gitlab.com/DKFZ-ODCF/ega-xml-dl
