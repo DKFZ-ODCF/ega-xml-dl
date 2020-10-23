@@ -39,3 +39,42 @@ a publicly funded body. It is made openly available under the MIT license under 
 If you use it, and have any ideas, suggestions or wish to contribute improvements, feel free to contribute or open issues at upstream:
 
 https://gitlab.com/DKFZ-ODCF/ega-xml-dl
+
+## semi-documented API details
+
+This download script uses two semi-documented APIs provided by EGA/ENA.
+These were reverse-engineered by looking at what the Webin interface does "under the hood".
+
+Both endpoints require authentication using http basic auth.
+The endpoint accepts both ENA login (animal data, `webin-00000`) and EGA accounts (human data, `ega-box-000`).
+
+Both API are implementation details of the Webin platform, so could change at any time.
+(Although it has been stable for multiple years, so far..)
+Depend on them at your own risk!
+
+### 'report' endpoint
+
+The 'report' endpoint gives one an overview of all IDs available in a given box.
+
+```
+https://www.ebi.ac.uk/ena/submit/report/$TYPE/?format=csv&max-results=99999
+```
+
+Where `$TYPE` is one of `analyses experiments runs samples studies submissions dacs datasets`.
+
+### 'drop-box' endpoint
+
+The 'drop-box' is primarily used for programmatic XML submissions, but also exposes previously submitted data
+using the Sequence Read Archive SRA XML format.
+For more information and examples on the SRA XML format, please see 
+[https://ega-archive.org/submission/sequence/programmatic_submissions/prepare_xml](https://ega-archive.org/submission/sequence/programmatic_submissions/prepare_xml).
+
+```
+https://www.ebi.ac.uk/ena/submit/drop-box/$TYPE/$ID?format=xml%
+```
+
+with `$TYPE` as above, and `$ID` an EGA-style ID from the CSV-report, e.g. `EGAC00001000452` (dac), or 
+`EGAS00001003554` (study).
+
+Note that the returned XMLs sometimes use ENA-style IDs internally (e.g. `EGAS00001003554` -> `ERP114444`), 
+which complicates mapping.
