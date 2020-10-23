@@ -6,7 +6,7 @@
 I_AM_THE_ONE_WHO_KNOCKS="DKFZ ega crawler - ${USER}@${HOSTNAME}"
 
 # EBI-EGA server root:
-EGA_ROOT="https://www.ebi.ac.uk/ena/submit"
+EBI_BASE_URL="https://www.ebi.ac.uk/ena/submit"
 
 # count lines in a file, returning ONLY the numeric count 
 linecount() {
@@ -34,9 +34,11 @@ echo
 
 # where to put our batch downloads
 OUTPUT_DIR="$HOME/ega-xml/$BOX";
-echo "Outputting downloads to $OUTPUT_DIR"
 
 if [ ! -d "$OUTPUT_DIR" ]; then mkdir -p "$OUTPUT_DIR"; fi;
+
+echo "Outputting downloads to $OUTPUT_DIR"
+echo "Identifying to EGA as user-agent \"${I_AM_THE_ONE_WHO_KNOCKS}\""
 
 
 ###################################
@@ -49,7 +51,7 @@ TYPES=('analyses' 'experiments' 'runs' 'samples' 'studies' 'submissions' 'dacs' 
 for TYPE in "${TYPES[@]}"; do
     echo "preparing todo-list for $TYPE"
     # construct the overview URL
-    URL="$EGA_ROOT/report/$TYPE/?format=csv&max-results=99999"
+    URL="${EBI_BASE_URL}/report/$TYPE/?format=csv&max-results=99999"
 
     # unfortunately, there is no way to use recursive wget, because the EBI does not offer
     # any listing of all the XML files (even requesting the overview with "format=xml" does nothing
@@ -107,7 +109,7 @@ for TYPE in "${TYPES[@]}"; do
 
     # get batch of XML files for this data-type
     while read ID; do
-        URL="$EGA_ROOT/drop-box/$TYPE/$ID?format=xml%"
+        URL="${EBI_BASE_URL}/drop-box/$TYPE/$ID?format=xml%"
         curl \
             -u "$BOX:$PASSWORD" \
             --user-agent "$I_AM_THE_ONE_WHO_KNOCKS" \
