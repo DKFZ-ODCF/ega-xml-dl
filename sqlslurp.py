@@ -22,14 +22,36 @@ def extractStudyInfo(path):
   """extracts the 'interesting' elements from an EGA-study XML representation.
   
   Parameter path must be a pathlib Path to a study XML file.
+  
+  Returns a dict with the fields of interest.
   """
 
-  log.debug("processing file %s", s)
+  log.debug("processing file %s", path)
   
+  result = dict()
+
+  # extract EGAS-number from filename, since it appears nowhere in the XML.
+  # XML internally uses ENA-style ERP ("Project")
   egasNumber = path.name
+  result['egasNumber'] = egasNumber
   
   xml = ET.parse(path)
-  print("title:", xml.find(".//STUDY_TITLE").text)
+
+  # extract title
+  title = xml.find("./STUDY/DESCRIPTOR/STUDY_TITLE").text
+  result['title'] = title
+  
+  # ENA ERP number
+  erpNumber = xml.find("./STUDY/IDENTIFIERS/PRIMARY_ID").text
+  result['erpNumber'] = erpNumber
+  
+  # PubMed / PMID
+  pubmed = xml.find("./STUDY/STUDY_LINKS/STUDY_LINK/XREF_LINK[DB='PUBMED']/ID")
+  if pubmed != None:  # Pubmed is optional, extract text-only if present
+    pubmed = pubmed.text
+  result['pubmed'] = pubmed
+  
+  log.debug("result for %s: %s", egasNumber, result)
 
 
 def main():
@@ -43,7 +65,7 @@ def main():
     extractStudyInfo(s)
     break  # DEBUG: finish after first study, that's enough while dev'ing
     
-    return 0
+  return 0
 
 
 if __name__ == '__main__':
