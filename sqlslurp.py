@@ -54,14 +54,14 @@ def extract_study_info(path):
   Parameter path must be a pathlib Path to a study XML file.
 
   Returns a tuple of parsed fields, suitable for direct ingestion into the DB:
-  (egas_number, )
+  (egas_id, )
   """
 
   log.debug("processing file %s", path)
 
   # extract EGAS-number from filename, since it appears nowhere in the XML.
   # XML internally uses ENA-style ERP ("Project")
-  egas_number = path.name
+  egas_id = path.name
 
   xml = ET.parse(path)
 
@@ -69,7 +69,7 @@ def extract_study_info(path):
   title = xml.find("./STUDY/DESCRIPTOR/STUDY_TITLE").text
 
   # ENA ERP number
-  erp_number = xml.find("./STUDY/IDENTIFIERS/PRIMARY_ID").text
+  erp_id = xml.find("./STUDY/IDENTIFIERS/PRIMARY_ID").text
 
   # PubMed / PMID
   pubmed = xml.find("./STUDY/STUDY_LINKS/STUDY_LINK/XREF_LINK[DB='PUBMED']/ID")
@@ -78,7 +78,7 @@ def extract_study_info(path):
 
   description = 'todo'
 
-  result = (egas_number, erp_number, pubmed, title, description)
+  result = (egas_id, erp_id, pubmed, title, description)
   log.debug("  result: %s", result)
   return result
 
@@ -107,12 +107,12 @@ def extract_exp_info(path):
 
   # extract EGAX-number from filename, since it appears nowhere in the XML.
   # XML internally uses ENA-style ERX
-  egax_number = path.name
+  egax_id = path.name
 
   xml = ET.parse(path)
 
   # ENA ERX number
-  erx_number = xml.find("./EXPERIMENT/IDENTIFIERS/PRIMARY_ID").text
+  erx_id = xml.find("./EXPERIMENT/IDENTIFIERS/PRIMARY_ID").text
 
   xref_study_erp = xml.find("./EXPERIMENT/STUDY_REF/IDENTIFIERS/PRIMARY_ID").text
 
@@ -122,7 +122,7 @@ def extract_exp_info(path):
 
   xref_sample_ers = xml.find("./EXPERIMENT/DESIGN/SAMPLE_DESCRIPTOR/IDENTIFIERS/PRIMARY_ID").text
 
-  result = (egax_number, erx_number, xref_study_erp, xref_study_egas, xref_sample_ers )
+  result = (egax_id, erx_id, xref_study_erp, xref_study_egas, xref_sample_ers )
   log.debug("  result: %s", result)
   return result
 
