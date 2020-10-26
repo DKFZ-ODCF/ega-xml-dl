@@ -13,12 +13,12 @@ basedir = "~/ega-xml/"
 # filename for the sqlite result that will be written in the box dir
 dbName = 'box-contents.sqlite'
 
-def getEgaXmlDir(whichBox):
-  """Returns the canonical path to the cache for `whichBox`.
+def get_ega_xml_dir(which_box):
+  """Returns the canonical path to the cache for `which_box`.
   
-  Parameter `whichBox` should be an EGA or ENA login, e.g. "ega-box-000" or "Webin-00000"
+  Parameter `which_box` should be an EGA or ENA login, e.g. "ega-box-000" or "Webin-00000"
   """
-  return Path.home() / 'ega-xml' / whichBox
+  return Path.home() / 'ega-xml' / which_box
 
 
 def create_or_open_db(db_file):
@@ -38,7 +38,7 @@ def create_or_open_db(db_file):
   return conn
 
 
-def extractStudyInfo(path):
+def extract_study_info(path):
   """Extracts the 'interesting' elements from an EGA-study XML representation.
   
   Parameter path must be a pathlib Path to a study XML file.
@@ -77,7 +77,7 @@ def process_studies(db_conn, box_dir):
   studies_dir = box_dir / 'studies'
 
   studies_files = studies_dir.glob('EGAS*')
-  parsed_studies = ( extractStudyInfo(f) for f in studies_files )
+  parsed_studies = ( extract_study_info(f) for f in studies_files )
   insert_study_sql = "INSERT INTO studies VALUES (?, ?, ?, ?, ?);"
 
   db_conn.executemany(insert_study_sql, parsed_studies);
@@ -89,7 +89,7 @@ def process_studies(db_conn, box_dir):
 def main():
   log.basicConfig( level=log.DEBUG, format='%(levelname)s: %(message)s' )
 
-  box_dir = getEgaXmlDir('ega-box-433')
+  box_dir = get_ega_xml_dir('ega-box-433')
 
   db_file = box_dir / dbName
   db_conn = create_or_open_db(db_file)
