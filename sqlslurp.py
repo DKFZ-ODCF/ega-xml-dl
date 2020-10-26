@@ -24,12 +24,14 @@ def getEgaXmlDir(whichBox):
 def create_or_open_db(db_file):
   conn = sqlite3.connect(db_file)
 
-  conn.execute(
-  """CREATE TABLE IF NOT EXISTS studies (
+  conn.executescript(
+  """DROP TABLE IF EXISTS studies;
+    CREATE TABLE studies (
 	EGAS varchar(15) PRIMARY KEY,
 	ERP varchar(10),
 	PMID integer,
-	title text NOT NULL
+	title text NOT NULL,
+	description text NOT NULL
       );"""
   )
 
@@ -41,65 +43,64 @@ def extractStudyInfo(path):
   
   Parameter path must be a pathlib Path to a study XML file.
   
-  Returns a dict with the fields of interest.
+  Returns a tuple of parsed fields, suitable for direct ingestion into the DB:
+  (egas_number, )
   """
 
   log.debug("processing file %s", path)
 
-  result = dict()
-
   # extract EGAS-number from filename, since it appears nowhere in the XML.
   # XML internally uses ENA-style ERP ("Project")
-  egasNumber = path.name
-  result['egasNumber'] = egasNumber
+  egas_number = path.name
   
   xml = ET.parse(path)
 
   # extract title
   title = xml.find("./STUDY/DESCRIPTOR/STUDY_TITLE").text
-  result['title'] = title
   
   # ENA ERP number
-  erpNumber = xml.find("./STUDY/IDENTIFIERS/PRIMARY_ID").text
-  result['erpNumber'] = erpNumber
+  erp_number = xml.find("./STUDY/IDENTIFIERS/PRIMARY_ID").text
   
   # PubMed / PMID
   pubmed = xml.find("./STUDY/STUDY_LINKS/STUDY_LINK/XREF_LINK[DB='PUBMED']/ID")
   if pubmed != None:  # Pubmed is optional, extract text-only if present
     pubmed = pubmed.text
-  result['pubmed'] = pubmed
   
-  log.debug("result for %s: %s", egasNumber, result)
+  description = 'todo'
+
+  result = (egas_number, erp_number, pubmed, title, description)
+  log.debug("  result: %s", result)
+  return result
 
 
-def save_study_info(fields):
-  """Saves the extracted study information into the sqlite DB.
-  """
+def process_studies(db_conn, box_dir):
+  studies_dir = box_dir / 'studies'
 
-  pass # TODO
+  studies_files = studies_dir.glob('EGAS*')
+  parsed_studies = ( extractStudyInfo(f) for f in studies_files )
+  insert_study_sql = "INSERT INTO studies VALUES (?, ?, ?, ?, ?);"
+
+  db_conn.executemany(insert_study_sql, parsed_studies);
 
 
-def process_studies(db_conn):
-  studiesDir = boxDir / 'studies'
-
-  for s in studiesDir.glob('EGAS*'):
-    result = extractStudyInfo(s)
-    save_study_info(result)
-    break  # DEBUG: finish after first study, that's enough while dev'ing
-
+  log.info("finished study parsing")
 
 
 def main():
   log.basicConfig( level=log.DEBUG, format='%(levelname)s: %(message)s' )
 
-  boxDir = getEgaXmlDir('ega-box-433')
-  db_file = boxDir / dbName
-  log.info("slurping XMLs from %s into %s", boxDir, db_file)
-  
+  box_dir = getEgaXmlDir('ega-box-433')
+
+  db_file = box_dir / dbName
   db_conn = create_or_open_db(db_file)
 
-  process_studies(db_conn)
-    
+  log.info("slurping XMLs from %s into %s", box_dir, db_file)
+
+  process_studies(db_conn, box_dir)
+
+  db_conn.commit()
+  db_conn.close()
+
   return 0
 
 
