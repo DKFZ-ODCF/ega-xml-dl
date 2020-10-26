@@ -15,7 +15,7 @@ dbName = 'box-contents.sqlite'
 
 def get_ega_xml_dir(which_box):
   """Returns the canonical path to the cache for `which_box`.
-  
+
   Parameter `which_box` should be an EGA or ENA login, e.g. "ega-box-000" or "Webin-00000"
   """
   return Path.home() / 'ega-xml' / which_box
@@ -50,9 +50,9 @@ def create_or_open_db(db_file):
 
 def extract_study_info(path):
   """Extracts the 'interesting' elements from an EGA-study XML representation.
-  
+
   Parameter path must be a pathlib Path to a study XML file.
-  
+
   Returns a tuple of parsed fields, suitable for direct ingestion into the DB:
   (egas_number, )
   """
@@ -62,20 +62,20 @@ def extract_study_info(path):
   # extract EGAS-number from filename, since it appears nowhere in the XML.
   # XML internally uses ENA-style ERP ("Project")
   egas_number = path.name
-  
+
   xml = ET.parse(path)
 
   # extract title
   title = xml.find("./STUDY/DESCRIPTOR/STUDY_TITLE").text
-  
+
   # ENA ERP number
   erp_number = xml.find("./STUDY/IDENTIFIERS/PRIMARY_ID").text
-  
+
   # PubMed / PMID
   pubmed = xml.find("./STUDY/STUDY_LINKS/STUDY_LINK/XREF_LINK[DB='PUBMED']/ID")
   if pubmed != None:  # Pubmed is optional, extract text-only if present
     pubmed = pubmed.text
-  
+
   description = 'todo'
 
   result = (egas_number, erp_number, pubmed, title, description)
@@ -89,9 +89,7 @@ def process_studies(db_conn, box_dir):
   studies_files = studies_dir.glob('EGAS*')
   parsed_studies = ( extract_study_info(f) for f in studies_files )
   insert_study_sql = "INSERT INTO studies VALUES (?, ?, ?, ?, ?);"
-
   db_conn.executemany(insert_study_sql, parsed_studies);
-
 
   log.info("finished study parsing")
 
