@@ -42,8 +42,19 @@ def create_or_open_db(db_file):
         XREF_EGAS varchar(15),
         XREF_ERS  varchar(10) NOT NULL
     );
-  """
-  )
+
+    DROP TABLE IF EXISTS runs;
+    CREATE TABLE runs (
+        EGAR      varchar(15) PRIMARY KEY,
+        ERR       varchar(10),
+        XREF_ERX  varchar(10) NOT NULL,
+        filetype  varchar(5)  NOT NULL,
+        forward_filename  text NOT NULL,
+        forward_md5       varchar(32) NOT NULL,
+        reverse_filename  text,
+        reverse_md5       varchar(32)
+    );
+  """)
 
   return conn
 
@@ -138,6 +149,50 @@ def process_experiments(db_conn, box_dir):
   log.info("finished experiment parsing")
 
 
+def extract_run_info(path):
+  log.debug("processing file %s", path)
+
+  egar_id = path.name
+
+  xml = ET.parse(path)
+
+  err_id = xml.find("./RUN/IDENTIFIERS/PRIMARY_ID").text
+
+  # experiment link
+  xref_exp_erx = xml.find("./RUN/EXPERIMENT_REF/IDENTIFIERS/PRIMARY_ID").text
+
+
+  files = xml.findall("./RUN/DATA_BLOCK/FILES/FILE")
+  filetype = files[0].get('filetype')
+
+  # "forward" file; there should be at least one file
+  # either a R1/forward, or a bam-file
+  forward_md5 = files[0].get('unencrypted_checksum')
+  forward_filename = files[0].get('filename')
+
+  # reverse file, missing for single-end sequencing or bams
+  reverse_md5 = None
+  reverse_filename = None
+  if len(files) == 2:
+    reverse_md5 = files[1].get('unencrypted_checksum')
+    reverse_filename = files[1].get('filename')
+
+  result = (egar_id, err_id, xref_exp_erx, filetype, forward_filename, forward_md5, reverse_filename, reverse_md5 )
+  log.debug("  result: %s", result)
+  return result
+
+
+def process_runs(db_conn, box_dir):
+  exp_dir = box_dir / 'runs'
+
+  exp_files = exp_dir.glob('EGAR*')
+  parsed_exps = ( extract_run_info(f) for f in exp_files )
+  insert_exp_sql = "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?, ?);"
+  db_conn.executemany(insert_exp_sql, parsed_exps);
+
+  log.info("finished run parsing")
+
+
 def main():
   log.basicConfig( level=log.DEBUG, format='%(levelname)s: %(message)s' )
 
@@ -150,6 +205,7 @@ def main():
 
   process_studies(db_conn, box_dir)
   process_experiments(db_conn, box_dir)
+  process_runs(db_conn, box_dir)
 
   db_conn.commit()
   db_conn.close()
