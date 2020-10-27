@@ -55,6 +55,18 @@ def create_or_open_db(db_file):
         reverse_md5       varchar(32)
     );
 
+    DROP TABLE IF EXISTS analyses;
+    CREATE TABLE analyses (
+        EGAZ      varchar(15) PRIMARY KEY,
+        ERZ       varchar(10),
+        XREF_ERP  varchar(10) NOT NULL,
+        XREF_EGAS varchar(15),
+        XREF_ERS  varchar(10) NOT NULL,
+        filetype  varchar(5)  NOT NULL,
+        filename  text,
+        md5       varchar(32)
+    );
+
     DROP TABLE IF EXISTS samples;
     CREATE TABLE samples (
         EGAN         varchar(15) PRIMARY KEY,
@@ -161,6 +173,34 @@ def extract_run_info(path):
   return result
 
 
+def extract_analyses_info(path):
+  log.debug("processing file %s", path)
+
+  ega_id = path.name
+
+  xml = ET.parse(path)
+
+  ena_id = xml.find("./ANALYSIS/IDENTIFIERS/PRIMARY_ID").text
+  submitter_id = xml.find("./ANALYSIS/IDENTIFIERS/SUBMITTER_ID").text
+  title = xml.find("./ANALYSIS/TITLE").text
+  xref_study_erp = xml.find("./ANALYSIS/STUDY_REF/IDENTIFIERS/PRIMARY_ID").text
+
+  xref_study_egas = xml.find("./ANALYSIS/STUDY_REF/IDENTIFIERS/SECONDARY_ID")
+  if xref_study_egas != None:
+    xref_study_egas = xref_study_egas.text
+
+  xref_sample_ers = xml.find("./ANALYSIS/SAMPLE_REF/IDENTIFIERS/PRIMARY_ID").text
+
+  file = xml.find("./ANALYSIS/FILES/FILE")
+  filetype = file.get('filetype')
+  filename = file.get('filename')
+  file_md5 = file.get('unencrypted_checksum')
+
+  result = (ega_id, ena_id, xref_study_erp, xref_study_egas, xref_sample_ers, filetype, filename, file_md5)
+  log.debug("  result: %s", result)
+  return result
+
+
 def extract_sample_info(path):
   log.debug("processing file %s", path)
 
@@ -225,10 +265,11 @@ def main():
 
   log.info("slurping XMLs from %s into %s", box_dir, db_file)
 
-  process_dir('studies',     'EGAS*', extract_study_info,  5, db_conn, box_dir)
-  process_dir('experiments', 'EGAX*', extract_exp_info,    5, db_conn, box_dir)
-  process_dir('runs',        'EGAR*', extract_run_info,    8, db_conn, box_dir)
-  process_dir('samples',     'EGAN*', extract_sample_info, 6, db_conn, box_dir)
+  process_dir('studies',     'EGAS*', extract_study_info,    5, db_conn, box_dir)
+  process_dir('experiments', 'EGAX*', extract_exp_info,      5, db_conn, box_dir)
+  process_dir('runs',        'EGAR*', extract_run_info,      8, db_conn, box_dir)
+  process_dir('analyses',    'EGAZ*', extract_analyses_info, 8, db_conn, box_dir)
+  process_dir('samples',     'EGAN*', extract_sample_info,   6, db_conn, box_dir)
 
   db_conn.close()
   log.info("  DONE")
