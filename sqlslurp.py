@@ -104,17 +104,6 @@ def extract_study_info(path):
   return result
 
 
-def process_studies(db_conn, box_dir):
-  studies_dir = box_dir / 'studies'
-
-  studies_files = studies_dir.glob('EGAS*')
-  parsed_studies = ( extract_study_info(f) for f in studies_files )
-  insert_study_sql = "INSERT INTO studies VALUES (?, ?, ?, ?, ?);"
-  db_conn.executemany(insert_study_sql, parsed_studies);
-
-  log.info("finished study parsing")
-
-
 def extract_exp_info(path):
   """Extracts the 'interesting' elements from an EGA experiment XML representation.
 
@@ -146,17 +135,6 @@ def extract_exp_info(path):
   result = (egax_id, erx_id, xref_study_erp, xref_study_egas, xref_sample_ers )
   log.debug("  result: %s", result)
   return result
-
-
-def process_experiments(db_conn, box_dir):
-  exp_dir = box_dir / 'experiments'
-
-  exp_files = exp_dir.glob('EGAX*')
-  parsed_exps = ( extract_exp_info(f) for f in exp_files )
-  insert_exp_sql = "INSERT INTO experiments VALUES (?, ?, ?, ?, ?);"
-  db_conn.executemany(insert_exp_sql, parsed_exps);
-
-  log.info("finished experiment parsing")
 
 
 def extract_run_info(path):
@@ -192,17 +170,6 @@ def extract_run_info(path):
   return result
 
 
-def process_runs(db_conn, box_dir):
-  exp_dir = box_dir / 'runs'
-
-  exp_files = exp_dir.glob('EGAR*')
-  parsed_exps = ( extract_run_info(f) for f in exp_files )
-  insert_exp_sql = "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?, ?);"
-  db_conn.executemany(insert_exp_sql, parsed_exps);
-
-  log.info("finished run parsing")
-
-
 def extract_sample_info(path):
   log.debug("processing file %s", path)
 
@@ -225,15 +192,14 @@ def extract_sample_info(path):
   return result
 
 
-def process_samples(db_conn, box_dir):
-  samp_dir = box_dir / 'samples'
-
-  samp_files = samp_dir.glob('EGAN*')
-  parsed_samples = ( extract_sample_info(f) for f in samp_files )
-  insert_sql = "INSERT INTO samples VALUES (?, ?, ?, ?, ?, ?);"
-  db_conn.executemany(insert_sql, parsed_samples);
-
-  log.info("finished samples parsing")
+def process_dir(datatype, glob, extract_func, fieldcount, db_conn, box_dir):
+  folder = box_dir / datatype
+  raw_files = folder.glob(glob)
+  parsed_files = ( extract_func(f) for f in raw_files )
+  insert_sql = 'INSERT INTO %s VALUES ( %s );' % (datatype, ', '.join(['?'] * fieldcount))
+  db_conn.executemany(insert_sql, parsed_files);
+  db_conn.commit()
+  log.info("finished %s parsing", datatype)
 
 
 def main():
@@ -246,12 +212,11 @@ def main():
 
   log.info("slurping XMLs from %s into %s", box_dir, db_file)
 
-  process_studies(db_conn, box_dir)
-  process_experiments(db_conn, box_dir)
-  process_runs(db_conn, box_dir)
-  process_samples(db_conn, box_dir)
+  process_dir('studies',     'EGAS*', extract_study_info,  5, db_conn, box_dir)
+  process_dir('experiments', 'EGAX*', extract_exp_info,    5, db_conn, box_dir)
+  process_dir('runs',        'EGAR*', extract_run_info,    8, db_conn, box_dir)
+  process_dir('samples',     'EGAN*', extract_sample_info, 6, db_conn, box_dir)
 
-  db_conn.commit()
   db_conn.close()
 
   return 0
