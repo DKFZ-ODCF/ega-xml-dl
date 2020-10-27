@@ -86,15 +86,14 @@ def extract_study_info(path):
 
   xml = ET.parse(path)
 
-  title = xml.find("./STUDY/DESCRIPTOR/STUDY_TITLE").text
   erp_id = xml.find("./STUDY/IDENTIFIERS/PRIMARY_ID").text
+  title = xml.find("./STUDY/DESCRIPTOR/STUDY_TITLE").text
+  description = xml.find("./STUDY/DESCRIPTOR/STUDY_ABSTRACT").text
 
   # PubMed / PMID
   pubmed = xml.find("./STUDY/STUDY_LINKS/STUDY_LINK/XREF_LINK[DB='PUBMED']/ID")
   if pubmed != None:  # Pubmed is optional, extract text-only if present
     pubmed = pubmed.text
-
-  description = 'todo'
 
   result = (egas_id, erp_id, pubmed, title, description)
   log.debug("  result: %s", result)
