@@ -184,6 +184,28 @@ def extract_sample_info(path):
 
 
 def process_dir(datatype, glob, extract_func, fieldcount, db_conn, box_dir):
+  """Metafunction to slurp all XML-files into a directory into the sql DB
+
+  Paramaters:
+    datatype: String representing both the XML-directory name and the SQL-table into which to insert
+              options: studies, experiments, runs, samples, analyses, datasets, dacs
+
+    glob: The filename glob pattern that is followed by the XML filenames.
+          Having this protects against accidental stray files in the XML-directory
+
+    extract_func: function handle to the XML-parsing function that translates the XML-contents into
+                  a tuple of only the 'interesting' stuff.
+                  See the various `extract_FOO_info` functions.
+
+    fieldcount: Number of fields returned by `extract_func`, so the SQL knows how many values to insert.
+
+    db_conn: Opened connection to the SQLite DB.
+
+    box_dir: Pathlib `Path` to the root of the XML-dump we are parsing; used to construct the datatype sub-paths.
+
+  Returns: None
+  """
+
   folder = box_dir / datatype
   raw_files = folder.glob(glob)
   parsed_files = ( extract_func(f) for f in raw_files )
