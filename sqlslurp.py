@@ -54,6 +54,16 @@ def create_or_open_db(db_file):
         reverse_filename  text,
         reverse_md5       varchar(32)
     );
+
+    DROP TABLE IF EXISTS samples;
+    CREATE TABLE samples (
+        EGAN         varchar(15) PRIMARY KEY,
+        ERS          varchar(10),
+        submitter_id text NOT NULL,
+        title        text,
+        subject_id   text NOT NULL,
+        gender       varchar(10) NOT NULL
+    );
   """)
 
   return conn
@@ -193,6 +203,39 @@ def process_runs(db_conn, box_dir):
   log.info("finished run parsing")
 
 
+def extract_sample_info(path):
+  log.debug("processing file %s", path)
+
+  egan_id = path.name
+
+  xml = ET.parse(path)
+
+  ers_id = xml.find("./SAMPLE/IDENTIFIERS/PRIMARY_ID").text
+  submitter_id = xml.find("./SAMPLE/IDENTIFIERS/SUBMITTER_ID").text
+  title = xml.find("./SAMPLE/TITLE").text
+  subject_id = xml.find("./SAMPLE/SAMPLE_ATTRIBUTES/SAMPLE_ATTRIBUTE[TAG='subject_id']/VALUE").text
+
+  gender = xml.find("./SAMPLE/SAMPLE_ATTRIBUTES/SAMPLE_ATTRIBUTE[TAG='gender']/VALUE")
+  if gender == None:
+    gender = xml.find("./SAMPLE/SAMPLE_ATTRIBUTES/SAMPLE_ATTRIBUTE[TAG='sex']/VALUE")
+  gender = gender.text
+
+  result = (egan_id, ers_id, submitter_id, title, subject_id, gender )
+  log.debug("  result: %s", result)
+  return result
+
+
+def process_samples(db_conn, box_dir):
+  samp_dir = box_dir / 'samples'
+
+  samp_files = samp_dir.glob('EGAN*')
+  parsed_samples = ( extract_sample_info(f) for f in samp_files )
+  insert_sql = "INSERT INTO samples VALUES (?, ?, ?, ?, ?, ?);"
+  db_conn.executemany(insert_sql, parsed_samples);
+
+  log.info("finished samples parsing")
+
+
 def main():
   log.basicConfig( level=log.DEBUG, format='%(levelname)s: %(message)s' )
 
@@ -206,6 +249,7 @@ def main():
   process_studies(db_conn, box_dir)
   process_experiments(db_conn, box_dir)
   process_runs(db_conn, box_dir)
+  process_samples(db_conn, box_dir)
 
   db_conn.commit()
   db_conn.close()
