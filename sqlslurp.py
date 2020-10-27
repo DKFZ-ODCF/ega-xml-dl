@@ -86,10 +86,7 @@ def extract_study_info(path):
 
   xml = ET.parse(path)
 
-  # extract title
   title = xml.find("./STUDY/DESCRIPTOR/STUDY_TITLE").text
-
-  # ENA ERP number
   erp_id = xml.find("./STUDY/IDENTIFIERS/PRIMARY_ID").text
 
   # PubMed / PMID
@@ -121,9 +118,7 @@ def extract_exp_info(path):
 
   xml = ET.parse(path)
 
-  # ENA ERX number
   erx_id = xml.find("./EXPERIMENT/IDENTIFIERS/PRIMARY_ID").text
-
   xref_study_erp = xml.find("./EXPERIMENT/STUDY_REF/IDENTIFIERS/PRIMARY_ID").text
 
   xref_study_egas = xml.find("./EXPERIMENT/STUDY_REF/IDENTIFIERS/SECONDARY_ID")
@@ -145,10 +140,7 @@ def extract_run_info(path):
   xml = ET.parse(path)
 
   err_id = xml.find("./RUN/IDENTIFIERS/PRIMARY_ID").text
-
-  # experiment link
   xref_exp_erx = xml.find("./RUN/EXPERIMENT_REF/IDENTIFIERS/PRIMARY_ID").text
-
 
   files = xml.findall("./RUN/DATA_BLOCK/FILES/FILE")
   filetype = files[0].get('filetype')
@@ -158,7 +150,7 @@ def extract_run_info(path):
   forward_md5 = files[0].get('unencrypted_checksum')
   forward_filename = files[0].get('filename')
 
-  # reverse file, missing for single-end sequencing or bams
+  # reverse file, if available, defaults to 'None' for single-end sequencing or bams
   reverse_md5 = None
   reverse_filename = None
   if len(files) == 2:
@@ -198,7 +190,7 @@ def process_dir(datatype, glob, extract_func, fieldcount, db_conn, box_dir):
   parsed_files = ( extract_func(f) for f in raw_files )
   insert_sql = 'INSERT INTO %s VALUES ( %s );' % (datatype, ', '.join(['?'] * fieldcount))
   db_conn.executemany(insert_sql, parsed_files);
-  db_conn.commit()
+  db_conn.commit() # seems executemany implicitly starts a transaction that needs to be closed for data to show up.
   log.info("finished %s parsing", datatype)
 
 
@@ -218,7 +210,7 @@ def main():
   process_dir('samples',     'EGAN*', extract_sample_info, 6, db_conn, box_dir)
 
   db_conn.close()
-
+  log.info("  DONE")
   return 0
 
 
