@@ -75,18 +75,18 @@ def extract_study_info(path):
   Parameter path must be a pathlib Path to a study XML file.
 
   Returns a tuple of parsed fields, suitable for direct ingestion into the DB:
-  (egas_id, )
+  (ega_id, )
   """
 
   log.debug("processing file %s", path)
 
   # extract EGAS-number from filename, since it appears nowhere in the XML.
   # XML internally uses ENA-style ERP ("Project")
-  egas_id = path.name
+  ega_id = path.name
 
   xml = ET.parse(path)
 
-  erp_id = xml.find("./STUDY/IDENTIFIERS/PRIMARY_ID").text
+  ena_id = xml.find("./STUDY/IDENTIFIERS/PRIMARY_ID").text
   title = xml.find("./STUDY/DESCRIPTOR/STUDY_TITLE").text
   description = xml.find("./STUDY/DESCRIPTOR/STUDY_ABSTRACT").text
 
@@ -95,7 +95,7 @@ def extract_study_info(path):
   if pubmed != None:  # Pubmed is optional, extract text-only if present
     pubmed = pubmed.text
 
-  result = (egas_id, erp_id, pubmed, title, description)
+  result = (ega_id, ena_id, pubmed, title, description)
   log.debug("  result: %s", result)
   return result
 
@@ -113,11 +113,11 @@ def extract_exp_info(path):
 
   # extract EGAX-number from filename, since it appears nowhere in the XML.
   # XML internally uses ENA-style ERX
-  egax_id = path.name
+  ega_id = path.name
 
   xml = ET.parse(path)
 
-  erx_id = xml.find("./EXPERIMENT/IDENTIFIERS/PRIMARY_ID").text
+  ena_id = xml.find("./EXPERIMENT/IDENTIFIERS/PRIMARY_ID").text
   xref_study_erp = xml.find("./EXPERIMENT/STUDY_REF/IDENTIFIERS/PRIMARY_ID").text
 
   xref_study_egas = xml.find("./EXPERIMENT/STUDY_REF/IDENTIFIERS/SECONDARY_ID")
@@ -126,7 +126,7 @@ def extract_exp_info(path):
 
   xref_sample_ers = xml.find("./EXPERIMENT/DESIGN/SAMPLE_DESCRIPTOR/IDENTIFIERS/PRIMARY_ID").text
 
-  result = (egax_id, erx_id, xref_study_erp, xref_study_egas, xref_sample_ers )
+  result = (ega_id, ena_id, xref_study_erp, xref_study_egas, xref_sample_ers )
   log.debug("  result: %s", result)
   return result
 
@@ -134,11 +134,11 @@ def extract_exp_info(path):
 def extract_run_info(path):
   log.debug("processing file %s", path)
 
-  egar_id = path.name
+  ega_id = path.name
 
   xml = ET.parse(path)
 
-  err_id = xml.find("./RUN/IDENTIFIERS/PRIMARY_ID").text
+  ena_id = xml.find("./RUN/IDENTIFIERS/PRIMARY_ID").text
   xref_exp_erx = xml.find("./RUN/EXPERIMENT_REF/IDENTIFIERS/PRIMARY_ID").text
 
   files = xml.findall("./RUN/DATA_BLOCK/FILES/FILE")
@@ -156,7 +156,7 @@ def extract_run_info(path):
     reverse_md5 = files[1].get('unencrypted_checksum')
     reverse_filename = files[1].get('filename')
 
-  result = (egar_id, err_id, xref_exp_erx, filetype, forward_filename, forward_md5, reverse_filename, reverse_md5 )
+  result = (ega_id, ena_id, xref_exp_erx, filetype, forward_filename, forward_md5, reverse_filename, reverse_md5 )
   log.debug("  result: %s", result)
   return result
 
@@ -164,11 +164,11 @@ def extract_run_info(path):
 def extract_sample_info(path):
   log.debug("processing file %s", path)
 
-  egan_id = path.name
+  ega_id = path.name
 
   xml = ET.parse(path)
 
-  ers_id = xml.find("./SAMPLE/IDENTIFIERS/PRIMARY_ID").text
+  ena_id = xml.find("./SAMPLE/IDENTIFIERS/PRIMARY_ID").text
   submitter_id = xml.find("./SAMPLE/IDENTIFIERS/SUBMITTER_ID").text
   title = xml.find("./SAMPLE/TITLE").text
   subject_id = xml.find("./SAMPLE/SAMPLE_ATTRIBUTES/SAMPLE_ATTRIBUTE[TAG='subject_id']/VALUE").text
@@ -178,7 +178,7 @@ def extract_sample_info(path):
     gender = xml.find("./SAMPLE/SAMPLE_ATTRIBUTES/SAMPLE_ATTRIBUTE[TAG='sex']/VALUE")
   gender = gender.text
 
-  result = (egan_id, ers_id, submitter_id, title, subject_id, gender )
+  result = (ega_id, ena_id, submitter_id, title, subject_id, gender )
   log.debug("  result: %s", result)
   return result
 
