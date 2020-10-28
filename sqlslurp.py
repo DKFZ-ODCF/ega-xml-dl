@@ -76,6 +76,26 @@ def create_or_open_db(db_file):
         subject_id   text NOT NULL,
         gender       varchar(10) NOT NULL
     );
+
+    DROP TABLE IF EXISTS datasets;
+    CREATE TABLE datasets (
+        EGAD        varchar(15) PRIMARY KEY,
+        EGAP        varchar(15) NOT NULL,
+	title       text NOT NULL,
+	description text
+    );
+    DROP TABLE IF EXISTS datasets_runs;
+    CREATE TABLE datasets_runs (
+        EGAD varchar(15),
+        EGAR varchar(15),
+        PRIMARY KEY (EGAD, EGAR)
+    );
+    DROP TABLE IF EXISTS datasets_analyses;
+    CREATE TABLE datasets_analyses (
+        EGAD varchar(15),
+        EGAZ varchar(15),
+        PRIMARY KEY (EGAD, EGAZ)
+    );
   """)
 
   return conn
@@ -223,6 +243,50 @@ def extract_sample_info(path):
   return result
 
 
+def extract_dataset_info(path):
+  log.debug("processing file %s", path)
+
+  ega_id = path.name
+
+  xml = ET.parse(path)
+  policy = xml.find("./DATASET/POLICY_REF/IDENTIFIERS/PRIMARY_ID").text
+  title = xml.find("./DATASET/TITLE").text
+
+  description = xml.find("./DATASET/DESCRIPTION")
+  if description != None:
+    description = description.text
+
+  run_refs = xml.findall('./DATASET/RUN_REF/IDENTIFIER/PRIMARY_ID')
+  run_links = ( (ega_id, ref.text) for ref in run_refs )
+  analyses_refs = xml.findall('./DATASET/ANALYSIS_REF/IDENTIFIER/PRIMARY_ID')
+  analyses_links = ( (ega_id, ref.text) for ref in analyses_refs )
+
+  # 3-tuple of 'normal result', 'runs' and 'analyses'
+  # with the latter two in a way that can be fed directly into `executemany`
+  result = (
+    (ega_id, policy, title, description ),
+    run_links,
+    analyses_links
+  )
+  log.debug("  result: %s", result)
+  return result
+
+def process_datasets(db_conn, box_dir):
+  """Process datasets separately, since they contain one-to-many relationships (1 dataset -> N runs and/or M analyses)."""
+
+  folder = box_dir / 'datasets'
+  raw_files = folder.glob('EGAD*')
+  parsed_files = ( extract_dataset_info(f) for f in raw_files )
+
+  for (result, run_links, analyses_links) in parsed_files:
+    db_conn.execute('INSERT INTO datasets VALUES (?, ?, ?, ?);', result)
+    db_conn.executemany('INSERT INTO datasets_runs VALUES (?, ?);', run_links)
+    db_conn.executemany('INSERT INTO datasets_analyses VALUES (?, ?);', analyses_links)
+
+  db_conn.commit() # seems executemany implicitly starts a transaction that needs to be closed for data to show up.
+  log.info("finished datasets parsing")
+
+
 def process_dir(datatype, glob, extract_func, fieldcount, db_conn, box_dir):
   """Metafunction to slurp all XML-files into a directory into the sql DB
 
@@ -270,6 +334,7 @@ def main():
   process_dir('runs',        'EGAR*', extract_run_info,      8, db_conn, box_dir)
   process_dir('analyses',    'EGAZ*', extract_analyses_info, 8, db_conn, box_dir)
   process_dir('samples',     'EGAN*', extract_sample_info,   6, db_conn, box_dir)
+  process_datasets(db_conn, box_dir)
 
   db_conn.close()
   log.info("  DONE")
