@@ -44,16 +44,16 @@ def create_or_open_db(db_file):
     CREATE TABLE experiments (
         EGAX      varchar(15) PRIMARY KEY,
         ERX       varchar(10),
-        XREF_ERP  varchar(10) NOT NULL,
-        XREF_EGAS varchar(15),
-        XREF_ERS  varchar(10) NOT NULL
+        XREF_ERP  varchar(10) NOT NULL REFERENCES studies(ERP),
+        XREF_EGAS varchar(15)          REFERENCES studies(EGAS),
+        XREF_ERS  varchar(10) NOT NULL REFERENCES samples(ERS)
     );
 
     DROP TABLE IF EXISTS runs;
     CREATE TABLE runs (
         EGAR      varchar(15) PRIMARY KEY,
         ERR       varchar(10),
-        XREF_ERX  varchar(10) NOT NULL,
+        XREF_ERX  varchar(10) NOT NULL REFERENCES experiments(ERX),
         filetype  varchar(5)  NOT NULL,
         forward_filename  text NOT NULL,
         forward_md5       varchar(32) NOT NULL,
@@ -65,9 +65,9 @@ def create_or_open_db(db_file):
     CREATE TABLE analyses (
         EGAZ      varchar(15) PRIMARY KEY,
         ERZ       varchar(10),
-        XREF_ERP  varchar(10) NOT NULL,
-        XREF_EGAS varchar(15),
-        XREF_ERS  varchar(10) NOT NULL,
+        XREF_ERP  varchar(10) NOT NULL REFERENCES studies(ERP),
+        XREF_EGAS varchar(15)          REFERENCES studies(EGAS),
+        XREF_ERS  varchar(10) NOT NULL REFERENCES samples(ERS),
         filetype  varchar(5)  NOT NULL,
         filename  text,
         md5       varchar(32)
@@ -92,14 +92,14 @@ def create_or_open_db(db_file):
     );
     DROP TABLE IF EXISTS datasets_runs;
     CREATE TABLE datasets_runs (
-        EGAD varchar(15),
-        EGAR varchar(15),
+        EGAD varchar(15) REFERENCES datasets(EGAD),
+        EGAR varchar(15) REFERENCES runs(EGAR),
         PRIMARY KEY (EGAD, EGAR)
     );
     DROP TABLE IF EXISTS datasets_analyses;
     CREATE TABLE datasets_analyses (
-        EGAD varchar(15),
-        EGAZ varchar(15),
+        EGAD varchar(15) REFERENCES datasets(EGAD),
+        EGAZ varchar(15) REFERENCES analyses(EGAZ),
         PRIMARY KEY (EGAD, EGAZ)
     );
   """)
