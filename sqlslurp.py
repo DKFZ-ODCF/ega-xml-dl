@@ -269,12 +269,13 @@ def extract_dataset_info(path):
 
   # 3-tuple of 'normal result', 'runs' and 'analyses'
   # with the latter two in a way that can be fed directly into `executemany`
+  details = (ega_id, policy, title, description)
   result = (
-    (ega_id, policy, title, description ),
+    details,
     run_links,
     analyses_links
   )
-  log.debug("  result: %s", result)
+  log.debug("  result: %s", details)
   return result
 
 def process_datasets(db_conn, box_dir):
@@ -326,7 +327,7 @@ def process_dir(datatype, glob, extract_func, fieldcount, db_conn, box_dir):
 
 
 def main(which_box):
-  log.basicConfig( level=log.DEBUG, format='%(levelname)s: %(message)s' )
+  log.basicConfig( level=log.INFO, format='%(levelname)s: %(message)s' )
 
   box_dir = get_ega_xml_dir(which_box)
 
