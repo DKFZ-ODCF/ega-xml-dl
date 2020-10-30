@@ -18,7 +18,13 @@ def get_ega_xml_dir(which_box):
 
   Parameter `which_box` should be an EGA or ENA login, e.g. "ega-box-000" or "Webin-00000"
   """
-  return Path.home() / 'ega-xml' / which_box
+
+  box_dir = Path.home() / 'ega-xml' / which_box
+
+  if ( not box_dir.is_dir() ):
+    raise FileNotFoundError("couldn't find XML dump directory for box: '%s'" % box_dir).with_traceback(None)
+
+  return box_dir
 
 
 def create_or_open_db(db_file):
@@ -319,10 +325,10 @@ def process_dir(datatype, glob, extract_func, fieldcount, db_conn, box_dir):
   log.info("finished %s parsing", datatype)
 
 
-def main():
+def main(which_box):
   log.basicConfig( level=log.DEBUG, format='%(levelname)s: %(message)s' )
 
-  box_dir = get_ega_xml_dir('ega-box-433')
+  box_dir = get_ega_xml_dir(which_box)
 
   db_file = box_dir / dbName
   db_conn = create_or_open_db(db_file)
@@ -342,4 +348,5 @@ def main():
 
 
 if __name__ == '__main__':
-  sys.exit(main())
+  which_box = sys.argv[1]
+  sys.exit(main(which_box))
