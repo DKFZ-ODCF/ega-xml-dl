@@ -332,7 +332,7 @@ def main(which_box):
   box_dir = get_ega_xml_dir(which_box)
 
   db_file = box_dir / dbName
-  db_conn = create_or_open_db(db_file)
+  db_conn = create_or_open_db(str(db_file))
 
   log.info("slurping XMLs from %s into %s", box_dir, db_file)
 
