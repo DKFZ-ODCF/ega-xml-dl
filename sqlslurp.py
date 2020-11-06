@@ -349,5 +349,12 @@ def main(which_box):
 
 
 if __name__ == '__main__':
+  if len(sys.argv) != 2:
+    print("""ERROR: Missing command line argument: which box should I slurp the XML for?
+
+Usage: sqlslurp.py ega-box-NNNN
+""")
+    sys.exit(42)
+
   which_box = sys.argv[1]
   sys.exit(main(which_box))
