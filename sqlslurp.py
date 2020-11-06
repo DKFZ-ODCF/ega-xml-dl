@@ -6,12 +6,29 @@ import sqlite3
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
+##################################################
+# SQL Slurper for EGA XML
+#
+# This script can ingest an XML-dump of an EGA submitter box (as produced by its sister, `ega-xml-dl`)
+# into an SQLite database for easier querying.
+#
+## Design of this script ##
+#
+# The script is set up in such a way that all the folders are processed one after the other
+# The overall logic handles the directory traversel, and hands each discovered XML-file into an 'extract_X_info()' function.
+#
+# The extract-functions are responsible for getting the tasty/interesting/relevant bits out of the jumble of XML that EGA provides
+# (EGA/SRA XML is somewhat redundant, and not all fields are interesting to submitters who just want to know 'what is in my box')
+# The result of each extract function is designed in such a way to be piped directly into SQLite's `executemany` function for the
+# corresponding table.
+# Datasets follow the same principle, but need some special handling because of their one-to-many links.
 
-# Hardcoded basedir to match the default output location from the ega-xml-dl shell-script
+# Hardcoded basedir to match the default output location from the ega-xml-dl shell-script.
 basedir = "~/ega-xml/"
 
-# filename for the sqlite result that will be written in the box dir
+# filename for the sqlite result that will be written in the box dir.
 dbName = 'box-contents.sqlite'
+
 
 def get_ega_xml_dir(which_box):
   """Returns the canonical path to the cache for `which_box`.
@@ -27,7 +44,16 @@ def get_ega_xml_dir(which_box):
   return box_dir
 
 
-def create_or_open_db(db_file):
+def reset_and_open_db(db_file):
+  """Opens an SQLite database file, and drops+recreates the EGA-XML tables in it.
+
+  Since this script is supposed to create an easier-to-query representation of EGA's state,
+  local modifications are actively discouraged by trampling them mercilessly.
+
+  Uses `DROP TABLE IF EXISTS x` + `CREATE TABLE x` pairs for everything to simplify 'caching'
+  ("no caching" is a valid caching strategy, and you won't convince me otherwise ;-P ).
+"""
+
   conn = sqlite3.connect(db_file)
 
   conn.executescript("""
@@ -113,7 +139,7 @@ def extract_study_info(path):
   Parameter path must be a pathlib Path to a study XML file.
 
   Returns a tuple of parsed fields, suitable for direct ingestion into the DB:
-  (ega_id, )
+  (ega_id, ena_id, pubmed, title, description)
   """
 
   log.debug("processing file %s", path)
@@ -144,7 +170,7 @@ def extract_exp_info(path):
   Parameter path must be a pathlib Path to an experiment XML file.
 
   Returns a tuple of parsed fields, suitable for direct ingestion into the DB:
-  (egax, erx, xref_study_erp, xref_study_egas, xref_sample_ers)
+  (ega_id, ena_id, xref_study_erp, xref_study_egas, xref_sample_ers )
   """
 
   log.debug("processing file %s", path)
@@ -170,6 +196,13 @@ def extract_exp_info(path):
 
 
 def extract_run_info(path):
+  """Extracts the 'interesting' elements from an EGA run XML representation.
+
+  Parameter path must be a pathlib Path to an experiment XML file.
+
+  Returns a tuple of parsed fields, suitable for direct ingestion into the DB:
+  (ega_id, ena_id, xref_exp_erx, filetype, forward_filename, forward_md5, reverse_filename, reverse_md5 )
+  """
   log.debug("processing file %s", path)
 
   ega_id = path.name
@@ -200,6 +233,13 @@ def extract_run_info(path):
 
 
 def extract_analyses_info(path):
+  """Extracts the 'interesting' elements from an EGA analys[i/e]s XML representation.
+
+  Parameter path must be a pathlib Path to an experiment XML file.
+
+  Returns a tuple of parsed fields, suitable for direct ingestion into the DB:
+  (ega_id, ena_id, xref_study_erp, xref_study_egas, xref_sample_ers, filetype, filename, file_md5)
+  """
   log.debug("processing file %s", path)
 
   ega_id = path.name
@@ -228,6 +268,13 @@ def extract_analyses_info(path):
 
 
 def extract_sample_info(path):
+  """Extracts the 'interesting' elements from an EGA sample XML representation.
+
+  Parameter path must be a pathlib Path to an experiment XML file.
+
+  Returns a tuple of parsed fields, suitable for direct ingestion into the DB:
+  (ega_id, ena_id, submitter_id, title, subject_id, gender )
+  """
   log.debug("processing file %s", path)
 
   ega_id = path.name
@@ -250,6 +297,20 @@ def extract_sample_info(path):
 
 
 def extract_dataset_info(path):
+  """Extracts the 'interesting' elements from an EGA dataset XML representation.
+
+  Parameter path must be a pathlib Path to an experiment XML file.
+
+  Since datasets are 1-to-many linked to other objects (an exclusive in this domain),
+  the result tuple is slightly more complicated.
+  it returns (details, run_links, analyses_links)
+  where 'details' is analogous to the 'result' from all the other extract_X_info functions,
+  run_links are the cross-links dataset->run as `(dataset_id, run_id)` tuples
+  analyses_links the same cross-links for dataset->analyses.
+
+  either, both or none of the X_links can be empty, because not all datasets are sensibly linked.
+  the X_links are suitable for direct ingestion into the database link-tables.
+  """
   log.debug("processing file %s", path)
 
   ega_id = path.name
@@ -332,7 +393,7 @@ def main(which_box):
   box_dir = get_ega_xml_dir(which_box)
 
   db_file = box_dir / dbName
-  db_conn = create_or_open_db(str(db_file))
+  db_conn = reset_and_open_db(str(db_file))
 
   log.info("slurping XMLs from %s into %s", box_dir, db_file)
 
